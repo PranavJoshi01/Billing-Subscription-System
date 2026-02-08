@@ -16,6 +16,19 @@ namespace BillingService.API
             // Add services to the container
             builder.Services.AddControllers();
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend",
+                    policy =>
+                    {
+                        policy
+                            .WithOrigins("http://localhost:5173")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod();
+                    });
+            });
+
+
             // Register Database (Entity Framework + SQL Server)
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -81,12 +94,21 @@ namespace BillingService.API
             }
 
             app.UseHttpsRedirection();
+            app.UseCors("AllowFrontend");
+
 
             //Enable Authentication BEFORE Authorization
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                DataSeeder.Seed(db);
+            }
+
 
             app.Run();
         }
